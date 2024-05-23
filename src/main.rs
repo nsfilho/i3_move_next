@@ -30,6 +30,7 @@ struct Rect {
     height: i32,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
 struct WorkspaceFiltered {
     num: isize,
     focused: bool,
@@ -48,7 +49,10 @@ fn main() -> Result<()> {
     let workspaces: Vec<Workspace> = serde_json::from_str(&output)?;
 
     // get the direction from terminal
-    let direction = std::env::args().nth(1).unwrap_or("1".to_string()).parse::<isize>()?;
+    let direction = std::env::args()
+        .nth(1)
+        .unwrap_or("1".to_string())
+        .parse::<isize>()?;
     let active_output = workspaces
         .iter()
         .find(|w| w.focused)
@@ -57,7 +61,7 @@ fn main() -> Result<()> {
         .clone();
 
     // filter the workspaces by the active output
-    let workspaces: Vec<WorkspaceFiltered> = workspaces
+    let mut workspaces: Vec<WorkspaceFiltered> = workspaces
         .into_iter()
         .filter_map(|w| {
             if w.output.eq(&active_output) {
@@ -70,6 +74,7 @@ fn main() -> Result<()> {
             }
         })
         .collect();
+    workspaces.sort_by(|a, b| a.num.cmp(&b.num));
 
     // get the current workspace index
     let active_index = workspaces.iter().position(|w| w.focused).unwrap();
@@ -82,8 +87,8 @@ fn main() -> Result<()> {
         };
         let next_workspace = workspaces.get(next_index).unwrap();
         Command::new("i3-msg")
-            .arg(format!("[workspace=\"{}\"]", next_workspace.num))
-            .arg("focus")
+            .arg("workspace")
+            .arg(format!("{}", next_workspace.num))
             .spawn()
             .expect("failed to execute process");
     }
